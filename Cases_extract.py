@@ -129,17 +129,35 @@ if __name__ =="__main__":
         '''
         Result_input = []
         Result_output = []
+        DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
+        DeepCase_Noun = [[], [], [], [], [], [], []]
+        SurfaceCase_Noun = [[], [], [], [], [], [], []]
+
         for Report_id, Noun, Particle, Verb, Verb_id in zip(tripleFrame.index, tripleFrame[u"名詞"], tripleFrame[u"助詞"], tripleFrame[u"動詞"], tripleFrame[u"動詞_id"]):
             print Report_id, Verb_id
             Result = Dc.predict(Noun, Particle, Verb)
             DeepCase_unique = Dc.identify(Result)
             print Noun, Particle, Verb, DeepCase_unique
-            
-        
+
+            DeepCase_Noun[DeepCaseList.index(DeepCase_unique)].append(Noun)
+            SurfaceCase_Noun[Dc.dummylist[2].columns.index(Particle)].append(Noun)
+        case_frame=
+            {u"動詞": ,
+            DeepCaseList[0]: DeepCase_Noun[0], DeepCaseList[1]:, DeepCaseList[2]:, DeepCaseList[3]:, DeepCaseList[4]:, DeepCaseList[5]:,DeepCaseList[6]:,
+            Dc.dummylist[2].columns[0]:, Dc.dummylist[2].columns[1]:, Dc.dummylist[2].columns[2]:, Dc.dummylist[2].columns[3]:, Dc.dummylist[2].columns[4]:, Dc.dummylist[2].columns[5]:, Dc.dummylist[2].columns[6]:, Dc.dummylist[2].columns[7]:, Dc.dummylist[2].columns[8]:, Dc.dummylist[2].columns[9]:, Dc.dummylist[2].columns[10]:, Dc.dummylist[2].columns[11]:
+        }
+
+        case_df = DataFrame(case_frame,
+        columns=[u"動詞",
+        DeepCaseList[0], DeepCaseList[1], DeepCaseList[2], DeepCaseList[3], DeepCaseList[4], DeepCaseList[5],DeepCaseList[6],
+        Dc.dummylist[2].columns[0], Dc.dummylist[2].columns[1], Dc.dummylist[2].columns[2], Dc.dummylist[2].columns[3], Dc.dummylist[2].columns[4], Dc.dummylist[2].columns[5], Dc.dummylist[2].columns[6], Dc.dummylist[2].columns[7], Dc.dummylist[2].columns[8], Dc.dummylist[2].columns[9], Dc.dummylist[2].columns[10], Dc.dummylist[2].columns[11]
+        ])
+
+
             for r in Result:
                 Result_input.append(r[0]+(Report_id, Verb_id))
                 Result_output.append(r[1])
-                
+
         inputFrame = DataFrame(Result_input, columns=[u"名詞", u"動詞", u"名詞クラス", u"動詞クラス", u"助詞", u"id", u"動詞_id"])
         outputFrame = DataFrame(Result_output, columns=[u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"])
         inputFrame.to_csv(u"D:/tmp/Treport/inputFrame.csv",encoding='shift-jis')
