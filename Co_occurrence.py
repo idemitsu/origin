@@ -8,7 +8,7 @@ def Co_occurrence(frame_from, field1, field2):
     frame_to = DataFrame({field1:frame_from[field1], field2:frame_from[field2]})
     frame_to[field_set]= frame_to[field1]+u'_'+frame_to[field2]
     casecounts = frame_to[field_set].value_counts()
-    #frame =frame_to.reset_index()
+    frame_to.reset_index(inplace=True)
     #del frame['index']
     count = []
     for i in range(len(frame_to)):

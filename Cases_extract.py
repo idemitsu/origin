@@ -51,7 +51,7 @@ def Triple_extract(path):
                             continue
                         chunk_id_from = int(chunk[u"id"])
                        
-                        '''
+
                         for i_from in reversed(range((int(chunk["id"])+1)*-1, 0)):
                             if int(chunkinfo[int(chunk[u"id"])+i_from]["link"])==chunk_id_from:                           
                                 chunk_id_from -= 1
@@ -64,7 +64,7 @@ def Triple_extract(path):
                                     break
                             else:
                                 break
-                        '''
+
                             
                         if tokinfo[int(chunk[u"id"])][compnoun_tail_id+1][0]==u"助詞" and tokinfo[int(chunk[u"id"])][compnoun_tail_id+1][1]!=u"接続助詞":
                             Particle = tokinfo[int(chunk[u"id"])][compnoun_tail_id+1][6]
