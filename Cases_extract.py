@@ -21,7 +21,7 @@ def Triple_extract(path):
         triplelist = {}
         for i in range(1, TR.s.nrows):
             #if i>TR.s.nrows/2:
-            if i>10:
+            if i>100:
                 break
             print i
             noenc = TR.delete_unnecc(i)
@@ -92,7 +92,7 @@ def Triple_extract(path):
                     
 if __name__ =="__main__":
         path = u'C:/Users/ide/Desktop/データ関連/診断考察/report_data_ver4_1.xlsx'
-        #path = u'D:/研究/データ/report_data_ver4_1.xlsx'
+        path = u'D:/研究/データ/report_data_ver4_1.xlsx'
         triplelist = Triple_extract(path)
         Nounlist = []
         Particlelist = []
@@ -109,12 +109,12 @@ if __name__ =="__main__":
                 idlist.append(Rindex)
         tripleFrame = DataFrame({u"名詞":Nounlist, u"助詞":Particlelist, u"動詞":Verblist, u"動詞_id":Verb_idlist, u"id":idlist}, columns=[u"id", u"名詞", u"助詞", u"動詞", u"動詞_id"])
         tripleFrame.set_index(u"id", inplace=True)
-        tripleFrame.to_csv("C:/tmp/Treport/Triple.csv", encoding='shift-jis')
+        tripleFrame.to_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis')
                 
         from Deepcase import Deepcase
-        netpath="C:/tmp/Evaluation/neural_network/neuron7/Trained.Network"
-        dummylistpath = "C:/tmp/Evaluation/dummylist.Word"
-        NV_classpath="C:/tmp/Evaluation/NV_class.Word"
+        netpath="D:/tmp/Evaluation/neural_network/neuron7/Trained.Network"
+        dummylistpath = "D:/tmp/Evaluation/dummylist.Word"
+        NV_classpath="D:/tmp/Evaluation/NV_class.Word"
         Dc = Deepcase(netpath, dummylistpath, NV_classpath)
         '''
         unNoun_path = u"C:/tmp/Treport/unregistered_NounsClass.csv"
@@ -126,37 +126,66 @@ if __name__ =="__main__":
         bun_Vthe_path = u"C:/tmp/Treport/bunruidb_Vthesaurus.csv"
         Dc.buruidb_verbs(bunruidb_path, bun_Vthe_path)
         '''    
-        '''
+
         Result_input = []
         Result_output = []
         DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
+
+        DeepCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+        SurfaceCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+
         DeepCase_Noun = [[], [], [], [], [], [], []]
-        SurfaceCase_Noun = [[], [], [], [], [], [], []]
+        SurfaceCase_Noun = [[], [], [], [], [], [], [], [], [], [], [], []]
+        Verb_target = []
+        Verb_target_id = [[],[]]
 
-        for Report_id, Noun, Particle, Verb, Verb_id in zip(tripleFrame.index, tripleFrame[u"名詞"], tripleFrame[u"助詞"], tripleFrame[u"動詞"], tripleFrame[u"動詞_id"]):
-            print Report_id, Verb_id
-            Result = Dc.predict(Noun, Particle, Verb)
-            DeepCase_unique = Dc.identify(Result)
-            print Noun, Particle, Verb, DeepCase_unique
+        for Report_id in range(1, tripleFrame.index[len(tripleFrame)-1]+1):
 
-            DeepCase_Noun[DeepCaseList.index(DeepCase_unique)].append(Noun)
-            SurfaceCase_Noun[Dc.dummylist[2].columns.index(Particle)].append(Noun)
-        case_frame=
-            {u"動詞": ,
-            DeepCaseList[0]: DeepCase_Noun[0], DeepCaseList[1]:, DeepCaseList[2]:, DeepCaseList[3]:, DeepCaseList[4]:, DeepCaseList[5]:,DeepCaseList[6]:,
-            Dc.dummylist[2].columns[0]:, Dc.dummylist[2].columns[1]:, Dc.dummylist[2].columns[2]:, Dc.dummylist[2].columns[3]:, Dc.dummylist[2].columns[4]:, Dc.dummylist[2].columns[5]:, Dc.dummylist[2].columns[6]:, Dc.dummylist[2].columns[7]:, Dc.dummylist[2].columns[8]:, Dc.dummylist[2].columns[9]:, Dc.dummylist[2].columns[10]:, Dc.dummylist[2].columns[11]:
-        }
+            tripleFrame_sort = tripleFrame.ix[1,:].sort(u"動詞_id")
+            Verb_id_pre = tripleFrame_sort.head(1)[u"動詞_id"].values[0]
+            for index_perR, (Noun, Verb, Particle, Verb_id) in enumerate(zip(tripleFrame_sort[u"名詞"], tripleFrame_sort[u"動詞"], tripleFrame_sort[u"助詞"], tripleFrame_sort[u"動詞_id"])):
+
+                print Report_id, Verb_id
+                Result = Dc.predict(Noun, Particle, Verb)
+                DeepCase_unique = Dc.identify(Result)
+                print Noun, Particle, Verb, DeepCase_unique
+
+                if Verb_id != Verb_id_pre or index_perR == len(tripleFrame_sort):
+                    Verb_target.append(Verb)
+                    Verb_target_id[0].append(Report_id)
+                    Verb_target_id[1].append(Verb_id_pre)
+                    for Di in range(len(DeepCaseList)):
+                        DeepCase_Noun[Di].append(DeepCase_Noun_perV[Di])
+                    for Si in range(len(Dc.dummylist[2].columns)):
+                        SurfaceCase_Noun[Si].append(SurfaceCase_Noun_perV[Si])
+
+                    DeepCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+                    SurfaceCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+
+
+                DeepCase_Noun_perV[DeepCaseList.index(DeepCase_unique)] = Noun
+                if Particle in list(Dc.dummylist[2].columns):
+                    SurfaceCase_Noun_perV[list(Dc.dummylist[2].columns).index(Particle)] = Noun
+
+                Verb_id_pre = Verb_id
+
+        case_frame={
+            u"報告書_id": Verb_target_id[0], u"動詞_id": Verb_target_id[1], u"動詞": Verb_target,
+                DeepCaseList[0]: DeepCase_Noun[0], DeepCaseList[1]: DeepCase_Noun[1], DeepCaseList[2]: DeepCase_Noun[2], DeepCaseList[3]: DeepCase_Noun[3], DeepCaseList[4]: DeepCase_Noun[4], DeepCaseList[5]:  DeepCase_Noun[5],DeepCaseList[6]: DeepCase_Noun[6],
+                Dc.dummylist[2].columns[0]: SurfaceCase_Noun[0], Dc.dummylist[2].columns[1]: SurfaceCase_Noun[1], Dc.dummylist[2].columns[2]: SurfaceCase_Noun[2], Dc.dummylist[2].columns[3]: SurfaceCase_Noun[3], Dc.dummylist[2].columns[4]: SurfaceCase_Noun[4], Dc.dummylist[2].columns[5]: SurfaceCase_Noun[5], Dc.dummylist[2].columns[6]: SurfaceCase_Noun[6], Dc.dummylist[2].columns[7]: SurfaceCase_Noun[7], Dc.dummylist[2].columns[8]: SurfaceCase_Noun[8], Dc.dummylist[2].columns[9]: SurfaceCase_Noun[9], Dc.dummylist[2].columns[10]: SurfaceCase_Noun[10], Dc.dummylist[2].columns[11]: SurfaceCase_Noun[11]
+                    }
 
         case_df = DataFrame(case_frame,
-        columns=[u"動詞",
+        columns=[
+        u"報告書_id", u"動詞_id", u"動詞",
         DeepCaseList[0], DeepCaseList[1], DeepCaseList[2], DeepCaseList[3], DeepCaseList[4], DeepCaseList[5],DeepCaseList[6],
         Dc.dummylist[2].columns[0], Dc.dummylist[2].columns[1], Dc.dummylist[2].columns[2], Dc.dummylist[2].columns[3], Dc.dummylist[2].columns[4], Dc.dummylist[2].columns[5], Dc.dummylist[2].columns[6], Dc.dummylist[2].columns[7], Dc.dummylist[2].columns[8], Dc.dummylist[2].columns[9], Dc.dummylist[2].columns[10], Dc.dummylist[2].columns[11]
         ])
 
-
-            for r in Result:
-                Result_input.append(r[0]+(Report_id, Verb_id))
-                Result_output.append(r[1])
+        '''
+                for r in Result:
+                    Result_input.append(r[0]+(Report_id, Verb_id))
+                    Result_output.append(r[1])
 
         inputFrame = DataFrame(Result_input, columns=[u"名詞", u"動詞", u"名詞クラス", u"動詞クラス", u"助詞", u"id", u"動詞_id"])
         outputFrame = DataFrame(Result_output, columns=[u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"])
