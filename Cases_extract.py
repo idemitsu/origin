@@ -141,7 +141,7 @@ if __name__ =="__main__":
 
         for Report_id in range(1, tripleFrame.index[len(tripleFrame)-1]+1):
 
-            tripleFrame_sort = tripleFrame.ix[1,:].sort(u"動詞_id")
+            tripleFrame_sort = tripleFrame.ix[Report_id,:].sort(u"動詞_id")
             Verb_id_pre = tripleFrame_sort.head(1)[u"動詞_id"].values[0]
             for index_perR, (Noun, Verb, Particle, Verb_id) in enumerate(zip(tripleFrame_sort[u"名詞"], tripleFrame_sort[u"動詞"], tripleFrame_sort[u"助詞"], tripleFrame_sort[u"動詞_id"])):
 
@@ -181,6 +181,8 @@ if __name__ =="__main__":
         DeepCaseList[0], DeepCaseList[1], DeepCaseList[2], DeepCaseList[3], DeepCaseList[4], DeepCaseList[5],DeepCaseList[6],
         Dc.dummylist[2].columns[0], Dc.dummylist[2].columns[1], Dc.dummylist[2].columns[2], Dc.dummylist[2].columns[3], Dc.dummylist[2].columns[4], Dc.dummylist[2].columns[5], Dc.dummylist[2].columns[6], Dc.dummylist[2].columns[7], Dc.dummylist[2].columns[8], Dc.dummylist[2].columns[9], Dc.dummylist[2].columns[10], Dc.dummylist[2].columns[11]
         ])
+
+        case_df.to_csv(u"D:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
 
         '''
                 for r in Result:
