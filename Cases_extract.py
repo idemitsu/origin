@@ -9,6 +9,7 @@ sys.modules.pop('neural_network') #アンインポート
 from Treport import Treport
 from Language import Language
 from pandas import DataFrame
+from TWordclass import TWordclass
 import pandas as pd
 
 '''
@@ -89,7 +90,48 @@ def Triple_extract(path):
 
             triplelist[i] = triple_perR
         return triplelist
-                    
+
+def TNoun_extract(tripleFrame, NVClass):
+    TN_class = TWordclass()
+    triple_Treport = [[]] * len(tripleFrame.columns)
+    for id, noun, particle, verb, verb_id in zip(tripleFrame.head(5).index, tripleFrame.head(5)[u"名詞"],
+                                                 tripleFrame.head(5)[u"助詞"], tripleFrame.head(5)[u"動詞"],
+                                                 tripleFrame.head(5)[u"動詞_id"]):
+        Lan = Language(noun)
+        outList = Lan.getMorpheme()
+        Tneed = False
+
+        for nounMor in outList:
+            if nounMor[0] in Dc.NV_class[0].keys():
+                print nounMor[0],
+                for Nclass in Dc.NV_class[0][nounMor[0]]:
+                    print Nclass,
+                    if Nclass in TN_class.Nounclass_all:
+                        Tneed = True
+                    elif Nclass in TN_class.TNounclass_Nopart.keys():
+                        Tneed = True
+                    elif Nclass in TN_class.TNounclass_part.keys():
+                        Tneed = True
+                    else:
+                        continue
+        if Tneed:
+            triple_Treport[0].append(id)
+            triple_Treport[1].append(noun)
+            triple_Treport[2].append(particle)
+            triple_Treport[3].append(verb)
+            triple_Treport[4].append(verb_id)
+            print
+        triple_Treportdict = {
+            u"id": triple_Treport[0],
+            tripleFrame.columns[0]: triple_Treport[1],
+            tripleFrame.columns[1]: triple_Treport[2],
+            tripleFrame.columns[2]: triple_Treport[3],
+            tripleFrame.columns[3]: triple_Treport[4],
+        }
+    triple_TreportFrame = DataFrame(triple_Treportdict,
+                                    columns=[u"id", tripleFrame.columns[0], tripleFrame.columns[1],
+                                             tripleFrame.columns[2], tripleFrame.columns[3],tripleFrame.columns[4]])
+
 if __name__ =="__main__":
         path = u'C:/Users/ide/Desktop/データ関連/診断考察/report_data_ver4_1.xlsx'
         path = u'D:/研究/データ/report_data_ver4_1.xlsx'
@@ -182,7 +224,7 @@ if __name__ =="__main__":
         Dc.dummylist[2].columns[0], Dc.dummylist[2].columns[1], Dc.dummylist[2].columns[2], Dc.dummylist[2].columns[3], Dc.dummylist[2].columns[4], Dc.dummylist[2].columns[5], Dc.dummylist[2].columns[6], Dc.dummylist[2].columns[7], Dc.dummylist[2].columns[8], Dc.dummylist[2].columns[9], Dc.dummylist[2].columns[10], Dc.dummylist[2].columns[11]
         ])
 
-        case_df.to_csv(u"D:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
+        case_df.to_csv(u"C:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
 
         '''
                 for r in Result:
