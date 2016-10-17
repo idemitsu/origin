@@ -1,9 +1,10 @@
+# coding:utf-8
 class TWordclass:
         def __init__(self):    
             #代名詞は無条件に抽出
 
             #全て抽出するクラス
-            TNounclass_all=[
+            self.TNounclass_all=[
                     u"食料",
                     u"資材",
                     u"空間",
@@ -17,7 +18,7 @@ class TWordclass:
             ]
 
             #部分一致でなければ抽出
-            TNounclass_Nopart ={
+            self.TNounclass_Nopart ={
                     u"存在": [u"結果"],
                     u"住居": [u"間"],
                     u"道具": [u"SOAP", u"面", u"的"],
@@ -29,7 +30,7 @@ class TWordclass:
             }
 
             #部分一致であれば抽出
-            TNounclass_part={
+            self.TNounclass_part={
                     u"仲間": [u"同士"],
                     u"類": [u"等", u"類", u"系", u"系統", u"種", u"メタルコンタクト"],
                     u"言語": [u"音"],
@@ -43,7 +44,7 @@ class TWordclass:
             }
 
             #抽出しないクラス
-            TNounclass_unnec=[
+            self.TNounclass_unnec=[
                     u"経済",
                     u"社会",
                     u"生物",
@@ -62,3 +63,21 @@ class TWordclass:
                     u"芸術",
                     u"未登録"
             ]
+            #入力助詞：u'から', u'が', u'で', u'と', u'として', u'に', u'にとって', u'は', u'へ', u'まで', u'より', u'を'
+            self.Particle_to = {
+                    u"により": u"で",
+                    u"の": u"",
+                    u"でも": u"",
+                    u"によって": u"で",
+                    u"など": u"",
+                    u"も": u"",
+                    u"と共に": u"と",
+                    u"か": u"",
+                    u"に対して": u"に",
+                    u"について": u"",
+                    u"に当たって": u"",
+                    u"にて": u"で",
+                    u"とも": u"と",
+                    u"とともに": u"と",
+                    u"において": u"で"
+            }

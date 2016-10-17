@@ -60,7 +60,6 @@ def Triple_extract(path):
                                 if from_tail_tok[1]==u"連体化" or from_tail_tok[0]==u"形容詞" or from_tail_tok[0]==u"連体詞" or from_tail_tok[0]==u"助動詞" or [1]==u"並立助詞" or from_tail_tok[0]==u"接続詞" or from_tail_tok[1]==u"読点" or from_tail_tok[1]==u"接続助詞":
                                     for sentence_tok_from in reversed(list(sentence_tok[int(chunkinfo[int(chunk[u"id"])+i_from]["id"])])):                                                                            
                                         Noun = sentence_tok_from +Noun
-                                        
                                 else:
                                     break
                             else:
@@ -91,27 +90,45 @@ def Triple_extract(path):
             triplelist[i] = triple_perR
         return triplelist
 
-def TNoun_extract(tripleFrame, NVClass):
-    TN_class = TWordclass()
-    triple_Treport = [[]] * len(tripleFrame.columns)
-    for id, noun, particle, verb, verb_id in zip(tripleFrame.head(5).index, tripleFrame.head(5)[u"名詞"],
-                                                 tripleFrame.head(5)[u"助詞"], tripleFrame.head(5)[u"動詞"],
-                                                 tripleFrame.head(5)[u"動詞_id"]):
+def TNoun_extract(tripleFrame, NV_class):
+    TW = TWordclass()
+    unify_particle= lambda x: TW.Particle_to.get(x, x)
+    tripleFrame[u"助詞"] = tripleFrame[u"助詞"].map(unify_particle)
+
+    triple_Treport = [[] for i in range(len(tripleFrame.columns) + 1)]
+    for id, noun, particle, verb, verb_id in zip(tripleFrame.index, tripleFrame[u"名詞"],
+                                                 tripleFrame[u"助詞"], tripleFrame[u"動詞"],
+                                                 tripleFrame[u"動詞_id"]):
+        print "Extract triple_Treport:", id, verb_id
         Lan = Language(noun)
         outList = Lan.getMorpheme()
+        Mor_1 = [outList[i][1] for i in range(len(outList))]
+        Mor_2 = [outList[i][2] for i in range(len(outList))]
+
         Tneed = False
 
         for nounMor in outList:
-            if nounMor[0] in Dc.NV_class[0].keys():
-                print nounMor[0],
-                for Nclass in Dc.NV_class[0][nounMor[0]]:
-                    print Nclass,
-                    if Nclass in TN_class.Nounclass_all:
+            if nounMor[2] == u"代名詞" or nounMor[1]==u"連体詞":
+                Tneed == True
+                break
+            if nounMor[0] in NV_class[0].keys():
+                for Nclass in NV_class[0][nounMor[0]]:
+                    if Nclass in TW.TNounclass_all:
                         Tneed = True
-                    elif Nclass in TN_class.TNounclass_Nopart.keys():
+                        break
+                    elif Nclass in TW.TNounclass_Nopart.keys():
                         Tneed = True
-                    elif Nclass in TN_class.TNounclass_part.keys():
-                        Tneed = True
+                        for TNoun_Nopart in TW.TNounclass_Nopart[Nclass]:
+                            if TNoun_Nopart in nounMor[0]:
+                                Tneed = False
+                            elif Nclass==u"様相" and nounMor[2]==u"形容動詞語幹":
+                                Tneed = False
+
+                    elif Nclass in TW.TNounclass_part.keys():
+                        for TNoun_Nopart in TW.TNounclass_part[Nclass]:
+                            if TNoun_Nopart in nounMor[0]:
+                                Tneed = True
+                                break
                     else:
                         continue
         if Tneed:
@@ -120,19 +137,23 @@ def TNoun_extract(tripleFrame, NVClass):
             triple_Treport[2].append(particle)
             triple_Treport[3].append(verb)
             triple_Treport[4].append(verb_id)
-            print
-        triple_Treportdict = {
-            u"id": triple_Treport[0],
-            tripleFrame.columns[0]: triple_Treport[1],
-            tripleFrame.columns[1]: triple_Treport[2],
-            tripleFrame.columns[2]: triple_Treport[3],
-            tripleFrame.columns[3]: triple_Treport[4],
-        }
-    triple_TreportFrame = DataFrame(triple_Treportdict,
+    triple_Treportdict = {
+        u"id": triple_Treport[0],
+        tripleFrame.columns[0]: triple_Treport[1],
+        tripleFrame.columns[1]: triple_Treport[2],
+        tripleFrame.columns[2]: triple_Treport[3],
+        tripleFrame.columns[3]: triple_Treport[4],
+    }
+    tripleFrame_Treport = DataFrame(triple_Treportdict,
                                     columns=[u"id", tripleFrame.columns[0], tripleFrame.columns[1],
-                                             tripleFrame.columns[2], tripleFrame.columns[3],tripleFrame.columns[4]])
+                                             tripleFrame.columns[2], tripleFrame.columns[3]])
+
+    return tripleFrame_Treport
+
 
 if __name__ =="__main__":
+        #全トリプルの抽出
+        '''
         path = u'C:/Users/ide/Desktop/データ関連/診断考察/report_data_ver4_1.xlsx'
         path = u'D:/研究/データ/report_data_ver4_1.xlsx'
         triplelist = Triple_extract(path)
@@ -152,12 +173,21 @@ if __name__ =="__main__":
         tripleFrame = DataFrame({u"名詞":Nounlist, u"助詞":Particlelist, u"動詞":Verblist, u"動詞_id":Verb_idlist, u"id":idlist}, columns=[u"id", u"名詞", u"助詞", u"動詞", u"動詞_id"])
         tripleFrame.set_index(u"id", inplace=True)
         tripleFrame.to_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis')
-                
+        '''
+        #トリプルから事象の抽出
+
+        tripleFrame = pd.read_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis')
         from Deepcase import Deepcase
         netpath="D:/tmp/Evaluation/neural_network/neuron7/Trained.Network"
         dummylistpath = "D:/tmp/Evaluation/dummylist.Word"
         NV_classpath="D:/tmp/Evaluation/NV_class.Word"
         Dc = Deepcase(netpath, dummylistpath, NV_classpath)
+        '''
+        tripleFrame_Treport = TNoun_extract(tripleFrame, Dc.NV_class)
+        tripleFrame_Treport.set_index(u"id", inplace=True)
+        tripleFrame_Treport.to_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis')
+        '''
+        #未登録語の登録
         '''
         unNoun_path = u"C:/tmp/Treport/unregistered_NounsClass.csv"
         unVerb_path = u"C:/tmp/Treport/unregistered_Verbs(bunruidb)Class.csv"
@@ -168,31 +198,32 @@ if __name__ =="__main__":
         bun_Vthe_path = u"C:/tmp/Treport/bunruidb_Vthesaurus.csv"
         Dc.buruidb_verbs(bunruidb_path, bun_Vthe_path)
         '''    
-
+        #格フレームの構築
+        tripleFrame_Treport = pd.read_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis', index_col=u'id')
         Result_input = []
         Result_output = []
         DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
 
-        DeepCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0"]
-        SurfaceCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+        DeepCase_Noun_perV = ["\0" for i in range(len(DeepCaseList)+1)]
+        SurfaceCase_Noun_perV = ["\0" for i in range(len(Dc.dummylist[2].columns)+1)]
 
-        DeepCase_Noun = [[], [], [], [], [], [], []]
-        SurfaceCase_Noun = [[], [], [], [], [], [], [], [], [], [], [], []]
+        DeepCase_Noun = [[] for i in range(len(DeepCaseList)+1)]
+        SurfaceCase_Noun = [[] for i in range(len(Dc.dummylist[2].columns)+1)]
         Verb_target = []
-        Verb_target_id = [[],[]]
+        Verb_target_id = [[], []]
 
-        for Report_id in range(1, tripleFrame.index[len(tripleFrame)-1]+1):
+        for Report_id in range(1, tripleFrame_Treport.index[len(tripleFrame_Treport)-1]+1):
 
-            tripleFrame_sort = tripleFrame.ix[Report_id,:].sort(u"動詞_id")
-            Verb_id_pre = tripleFrame_sort.head(1)[u"動詞_id"].values[0]
-            for index_perR, (Noun, Verb, Particle, Verb_id) in enumerate(zip(tripleFrame_sort[u"名詞"], tripleFrame_sort[u"動詞"], tripleFrame_sort[u"助詞"], tripleFrame_sort[u"動詞_id"])):
+            tripleFrame_Treport_sort = tripleFrame_Treport.ix[Report_id,:].sort(u"動詞_id")
+            Verb_id_pre = tripleFrame_Treport_sort.head(1)[u"動詞_id"].values[0]
+            for index_perR, (Noun, Verb, Particle, Verb_id) in enumerate(zip(tripleFrame_Treport_sort[u"名詞"], tripleFrame_Treport_sort[u"動詞"], tripleFrame_Treport_sort[u"助詞"], tripleFrame_Treport_sort[u"動詞_id"])):
 
                 print Report_id, Verb_id
                 Result = Dc.predict(Noun, Particle, Verb)
                 DeepCase_unique = Dc.identify(Result)
                 print Noun, Particle, Verb, DeepCase_unique
 
-                if Verb_id != Verb_id_pre or index_perR == len(tripleFrame_sort):
+                if Verb_id != Verb_id_pre or index_perR == len(tripleFrame_Treport_sort):
                     Verb_target.append(Verb)
                     Verb_target_id[0].append(Report_id)
                     Verb_target_id[1].append(Verb_id_pre)
@@ -201,8 +232,8 @@ if __name__ =="__main__":
                     for Si in range(len(Dc.dummylist[2].columns)):
                         SurfaceCase_Noun[Si].append(SurfaceCase_Noun_perV[Si])
 
-                    DeepCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0"]
-                    SurfaceCase_Noun_perV = ["\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0", "\0"]
+                    DeepCase_Noun_perV = ["\0" for i in range(len(DeepCaseList))]
+                    SurfaceCase_Noun_perV = ["\0" for i in range(len(Dc.dummylist[2].columns))]
 
 
                 DeepCase_Noun_perV[DeepCaseList.index(DeepCase_unique)] = Noun
@@ -211,20 +242,21 @@ if __name__ =="__main__":
 
                 Verb_id_pre = Verb_id
 
-        case_frame={
-            u"報告書_id": Verb_target_id[0], u"動詞_id": Verb_target_id[1], u"動詞": Verb_target,
-                DeepCaseList[0]: DeepCase_Noun[0], DeepCaseList[1]: DeepCase_Noun[1], DeepCaseList[2]: DeepCase_Noun[2], DeepCaseList[3]: DeepCase_Noun[3], DeepCaseList[4]: DeepCase_Noun[4], DeepCaseList[5]:  DeepCase_Noun[5],DeepCaseList[6]: DeepCase_Noun[6],
-                Dc.dummylist[2].columns[0]: SurfaceCase_Noun[0], Dc.dummylist[2].columns[1]: SurfaceCase_Noun[1], Dc.dummylist[2].columns[2]: SurfaceCase_Noun[2], Dc.dummylist[2].columns[3]: SurfaceCase_Noun[3], Dc.dummylist[2].columns[4]: SurfaceCase_Noun[4], Dc.dummylist[2].columns[5]: SurfaceCase_Noun[5], Dc.dummylist[2].columns[6]: SurfaceCase_Noun[6], Dc.dummylist[2].columns[7]: SurfaceCase_Noun[7], Dc.dummylist[2].columns[8]: SurfaceCase_Noun[8], Dc.dummylist[2].columns[9]: SurfaceCase_Noun[9], Dc.dummylist[2].columns[10]: SurfaceCase_Noun[10], Dc.dummylist[2].columns[11]: SurfaceCase_Noun[11]
-                    }
+        cf_list =[
+        (u"報告書_id", Verb_target_id[0]), (u"動詞_id", Verb_target_id[1]), (u"動詞", Verb_target)
+        ]
+        cf_list.extend([(DeepCaseList[i], DeepCase_Noun[i]) for i in range(len(DeepCaseList))])
+        cf_list.extend([(Dc.dummylist[2].columns[i], SurfaceCase_Noun[i]) for i in range(len(Dc.dummylist[2].columns))])
 
-        case_df = DataFrame(case_frame,
-        columns=[
-        u"報告書_id", u"動詞_id", u"動詞",
-        DeepCaseList[0], DeepCaseList[1], DeepCaseList[2], DeepCaseList[3], DeepCaseList[4], DeepCaseList[5],DeepCaseList[6],
-        Dc.dummylist[2].columns[0], Dc.dummylist[2].columns[1], Dc.dummylist[2].columns[2], Dc.dummylist[2].columns[3], Dc.dummylist[2].columns[4], Dc.dummylist[2].columns[5], Dc.dummylist[2].columns[6], Dc.dummylist[2].columns[7], Dc.dummylist[2].columns[8], Dc.dummylist[2].columns[9], Dc.dummylist[2].columns[10], Dc.dummylist[2].columns[11]
-        ])
+        case_frame=dict(cf_list)
 
-        case_df.to_csv(u"C:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
+        cd_columns = [u"報告書_id", u"動詞_id", u"動詞"]
+        cd_columns.extend([DeepCaseList[i] for i in range(len(DeepCaseList))])
+        cd_columns.extend([Dc.dummylist[2].columns[i] for i in range(len(Dc.dummylist[2].columns))])
+
+        case_df = DataFrame(case_frame, columns=cd_columns)
+
+        case_df.to_csv(u"D:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
 
         '''
                 for r in Result:
