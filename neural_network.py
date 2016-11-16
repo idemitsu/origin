@@ -285,21 +285,24 @@ class Neural:
         return precision_perD
     
     def resultplot(self, precision_perD, precision2_perD, Ddummy):
+
         bar_width = 0.35
-        plt.bar(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision_perD)*np.array([100]*len(Ddummy.columns))
-, width=bar_width, color="#000000", label=u"Highest", align="center")
+        plt.bar(np.array(range(1, len(Ddummy.columns) + 1)),
+                np.array(precision_perD) * np.array([100] * len(Ddummy.columns))
+                , width=bar_width, color="#000000", label=u"Highest", align="center")
         plt.title("")
-        #plt.xlabel("Deep cases")
+        # plt.xlabel("Deep cases")
         plt.ylabel(u"Precision(%)", fontsize=30)
         plt.grid(True)
-        plt.bar(np.array(range(1,len(Ddummy.columns)+1))+bar_width, np.array(precision2_perD)*np.array([100]*len(precision_perD)), color="#AAAAAA",width=bar_width,label=u"Second_highest", align="center")
-        #plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), label="Precision_max2")
-        #plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), 'o')
-        plt.legend(bbox_to_anchor=(0,0),loc='lower left', borderaxespad=0, fontsize=26)
-        plt.xticks(np.array(range(1,len(Ddummy.columns)+1))+bar_width/2, Ddummy.columns, fontsize=30)
-      
-                                                                    
-                
+        plt.bar(np.array(range(1, len(Ddummy.columns) + 1)) + bar_width,
+                np.array(precision2_perD) * np.array([100] * len(precision_perD)), color="#AAAAAA", width=bar_width,
+                label=u"Second_highest", align="center")
+        # plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), label="Precision_max2")
+        # plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), 'o')
+        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', borderaxespad=0, fontsize=26)
+        plt.xticks(np.array(range(1, len(Ddummy.columns) + 1)) + bar_width / 2, Ddummy.columns, fontsize=30)
+
+
 '''
 data_expclass = pd.read_csv("C:/tmp/Evaluation/dataclass_learning.csv",encoding="shift-jis")      
 from neural_network import Neural

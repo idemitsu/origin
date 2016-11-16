@@ -13,7 +13,8 @@ from TWordclass import TWordclass
 import pandas as pd
 import nltk
 import itertools
-
+from collections import Counter
+import math
 '''
 class Cases_extract:
     def __init__(self):
@@ -99,11 +100,12 @@ def TNoun_extract(tripleFrame, NV_class):
     TW = TWordclass()
     unify_particle= lambda x: TW.Particle_to.get(x, x)
     tripleFrame[u"助詞"] = tripleFrame[u"助詞"].map(unify_particle)
-    tripleFrame = tripleFrame.head(500)
     triple_Treport = [[] for i in range(len(tripleFrame.columns) + 1)]
     for id, noun, particle, verb, verb_id in zip(tripleFrame.index, tripleFrame[u"名詞"],
                                                  tripleFrame[u"助詞"], tripleFrame[u"動詞"],
                                                  tripleFrame[u"動詞_id"]):
+        if id >500: break
+
         #print noun, particle, verb
         print "Extract triple_Treport:", id, verb_id
         Lan = Language(noun)
@@ -242,19 +244,25 @@ def TNoun_extract(tripleFrame, NV_class):
     tripleFrame_Treport[u"動詞"] = tripleFrame_Treport[u"動詞"].map(fvu)
     return tripleFrame_Treport
 
-
-def bunrui_frame(self, case_df):
-    MorList = []
+def extract_terms(self, case_df):
     Noun_comp = u""
-    Noun_weight = 1.5
-    for frame in case_df.loc[:, [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係", u"動詞"]].head(
-            500).drop_duplicates().values:
+    wakachi = u""
+    preR_id = 1
+    terms = []
+    documents = []
+    for (Report_id, frame) in zip(case_df[u"報告書_id"], case_df.loc[:, [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係", u"動詞"]].values):
+        if preR_id != Report_id:
+            documents.append(wakachi)
+            print wakachi
+            wakachi = u""
         if frame[7][-2:] != u"する":
-            MorList_tmp = {frame[7]: 1}
+            wakachi += frame[7] + u" "
+            if frame[7] not in terms: terms.append(frame[7])
         else:
-            MorList_tmp = {frame[7][:-2]: 1}
+            wakachi += frame[7][:-2] + u" "
+            if frame[7][:-2] not in terms: terms.append(frame[7][:-2])
         for i in range(0, 7):
-            if frame[i] == '\x00':
+            if frame[i] == u' ':
                 continue
             Lan = Language(frame[i])
             outList = Lan.getMorpheme()
@@ -266,20 +274,85 @@ def bunrui_frame(self, case_df):
                     Noun_comp += Mor[0]
                     if mi < len(Mor_1) - 1:
                         if Mor_1[mi + 1] != u"名詞":
-                            MorList_tmp[Noun_comp] = Noun_weight
+                            wakachi += Noun_comp + u" "
+                            if Noun_comp not in terms: terms.append(Noun_comp)
                             Noun_comp = u""
                     else:
-                        MorList_tmp[Noun_comp] = Noun_weight
+                        wakachi += Noun_comp + u" "
+                        if Noun_comp not in terms: terms.append(Noun_comp)
                         Noun_comp = u""
                 elif Mor_1[mi] != u"助詞" and Mor_1[mi] != u"助動詞" and Mor[5] != u"サ変・スル" and Mor[2] != u"接尾":
-                    MorList_tmp[Mor[0]] = 1
+                    wakachi += Mor[0] + u" "
+                    if Mor[0] not in terms: terms.append(Mor[0])
+
+        preR_id += 1
+    documents.append(wakachi)
+    return terms, documents
+
+def tf(self, terms, document):
+    #TF値の計算。単語リストと文章を渡す
+    tf_values = [document.count(term) for term in terms]
+    return list(map(lambda x: x/sum(tf_values), tf_values))
+
+def idf(self, terms, documents):
+    #IDF値の計算。単語リストと全文章を渡す
+    return [math.log10(len(documents)/sum([bool(term in document) for document in documents])) for term in terms]
+
+def tf_idf(self, terms, documents):
+    #TF-IDF値を計算。文章毎にTF-IDF値を計算
+    return [[_tf*_idf for _tf, _idf in zip(tf(terms, document), idf(terms, documents))] for document in documents]
+
+
+def bunrui_frame(self, case_df, terms, idf_Treport):
+    MorList = []
+    Noun_comp = u""
+    Noun_weight = 2.0
+    case_df[u"事象"] = case_df[u"主体"] + case_df[u"起点"] + case_df[u"対象"] + case_df[u"状況"] + case_df[u"着点"] + case_df[
+        u"手段"] + case_df[u"関係"] + case_df[u"動詞"]
+
+    for frame in case_df.loc[:, [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係", u"動詞"]].head(
+            500).drop_duplicates().values:
+        if frame[7][-2:] != u"する":
+            MorList_tmp = {frame[7]: idf_Treport[terms.index(frame[7])]}
+        else:
+            MorList_tmp = {frame[7][:-2]: idf_Treport[terms.index(frame[7][:-2])]}
+        for i in range(0, 7):
+            if frame[i] == u' ':
+                continue
+            Lan = Language(frame[i])
+            outList = Lan.getMorpheme()
+            Mor_1 = [outList[i][1] for i in range(len(outList))]
+            # if (u"接続詞" in Mor_1) | (u"記号" in Mor_1):
+            #    continue
+            Nocomp = True
+            for mi, Mor in enumerate(outList):
+                if Mor_1[mi] == u"名詞" and Mor[2] != u"形容動詞語幹":
+                    Noun_comp += Mor[0]
+                    if mi < len(Mor_1) - 1:
+                        if Mor_1[mi + 1] != u"名詞":
+                            MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)] * Noun_weight
+                            Noun_comp = u""
+                            Nocomp=True
+
+                        else:
+                            Nocomp =False
+                    else:
+                        if Nocomp and Mor[2] == u"サ変接続":
+                            MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)]
+                            Noun_comp = u""
+                        else:
+                            MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)] * Noun_weight
+                            Noun_comp = u""
+
+                elif Mor_1[mi] != u"助詞" and Mor_1[mi] != u"助動詞" and Mor[5] != u"サ変・スル" and Mor[2] != u"接尾":
+                    MorList_tmp[Mor[0]] = idf_Treport[terms.index(Mor[0])]
 
         MorList.append(MorList_tmp)
 
-    caseFrame = case_df[u"主体"] + u" " + case_df[u"起点"] + u" " + case_df[u"対象"] + u" " + case_df[u"状況"] + u" " + case_df[
-        u"着点"] + u" " + case_df[u"手段"] + u" " + case_df[u"関係"] + u" " + case_df[u"動詞"]
-    cf = [i for i in caseFrame.drop_duplicates()]
-
+    #caseFrame = case_df[u"主体"] + u" " + case_df[u"起点"] + u" " + case_df[u"対象"] + u" " + case_df[u"状況"] + u" " + case_df[
+     #   u"着点"] + u" " + case_df[u"手段"] + u" " + case_df[u"関係"] + u" " + case_df[u"動詞"]
+    cf = [i for i in case_df[u"事象"].drop_duplicates()]
+    '''
     #包含関係による統一辞書の作成
     unifyList = {}
     for i, x in enumerate(MorList):
@@ -308,15 +381,24 @@ def bunrui_frame(self, case_df):
                         print outList[len(outList) - 1][0], outList[len(outList) - 1][1], outList[len(outList) - 1][2]
 
                         # print "%s<>%s:%f" % (cf[i],cf[j],nltk.distance.jaccard_distance(set(s),set(t)))
+    '''
     #Jaccard係数による統一辞書の作成
     Wdist_index = []
     Wdist_column = []
     Wdist = []
     unifyList = {}
+    Case_freq = Counter(case_df[u"事象"])
+    # 各文の動詞が反対語リストに含まれていれば分類しない
+    oppositeList = [u"良好", u"正常", u"低下する"]
 
     for i, x in enumerate(MorList):
         for j, y in enumerate(MorList[i + 1:]):
             j = i + j + 1
+            if bool(set(oppositeList).intersection(set(x.keys()))) and not(bool(set(y.keys()).issuperset(set(oppositeList).intersection(set(x.keys()))))):
+                continue
+            elif bool(set(oppositeList).intersection(set(y.keys()))) and not(bool(set(x.keys()).issuperset(set(oppositeList).intersection(set(y.keys()))))):
+                continue
+
             if (x.keys() in unifyList.keys()) | (y.keys() in unifyList.keys()):
                 continue
             if bool(set(x.keys()).intersection(set(y.keys()))) and cf[i] != cf[j]:
@@ -340,6 +422,18 @@ def bunrui_frame(self, case_df):
                         w_insec += xy_set[mor_val]
                     dist_str = w_insec / w_all
                     if dist_str > 0.3:
+                        #もしくは、頻度が高い格フレーム
+                        if Case_freq[cf[j]] <= Case_freq[cf[i]] and cf[i] not in unifyList.keys():
+                            unifyList[cf[i]] = cf[j]
+                        elif Case_freq[cf[j]] > Case_freq[cf[i]] and cf[j] not in unifyList.keys():
+                            unifyList[cf[j]] = cf[i]
+                        '''
+                        #形態素数が少ない格フレーム：形態素数が多い格フレーム
+                        if len(set(x.keys())) < len(set(y.keys())) and cf[i] not in unifyList.keys():
+                            unifyList[cf[i]] = cf[j]
+                        elif len(set(x.keys())) > len(set(y.keys())) and cf[j] not in unifyList.keys():
+                            unifyList[cf[j]] = cf[i]
+                        '''
                         print "%d:%s" % (i, cf[i]), "%d:%s" % (j, cf[j]), dist_str, w_insec, w_all
                         print outList[len(outList) - 1][0], outList[len(outList) - 1][1], outList[len(outList) - 1][2]
                         Wdist_index.append(cf[i])
@@ -348,6 +442,10 @@ def bunrui_frame(self, case_df):
 
     Wdist_mat = Series(Wdist, index=[Wdist_index, Wdist_column]).unstack()
     Wdist = DataFrame(Wdist, index=[Wdist_index, Wdist_column], columns=[u"Similarity"])
+
+    fnc = lambda x: unifyList.get(x, x)
+    case_df[u"事象"] = case_df[u"事象"].map(fnc)
+    return case_df
 
 
 if __name__ =="__main__":
@@ -380,12 +478,12 @@ if __name__ =="__main__":
         dummylistpath = "D:/tmp/Evaluation/dummylist.Word"
         NV_classpath="D:/tmp/Evaluation/NV_class.Word"
         Dc = Deepcase(netpath, dummylistpath, NV_classpath)
-        #'''
+        '''
         tripleFrame = pd.read_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis', index_col=u'id')
         tripleFrame_Treport = TNoun_extract(tripleFrame, Dc.NV_class)
         tripleFrame_Treport.set_index(u"id", inplace=True)
         tripleFrame_Treport.to_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis')
-        #'''
+        '''
         #未登録語の登録
         '''
         unNoun_path = u"D:/tmp/Treport/unregistered_NounsClass.csv"
@@ -396,7 +494,7 @@ if __name__ =="__main__":
         bunruidb_path = u"D:/Users/ide/Desktop/データ関連/bunruidb/bunruidb.txt"
         bun_Vthe_path = u"D:/tmp/Treport/bunruidb_Vthesaurus.csv"
         Dc.buruidb_verbs(bunruidb_path, bun_Vthe_path)
-        '''    
+        '''
         #格フレームの構築
         tripleFrame_Treport = pd.read_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis', index_col=u'id')
         Result_input = []
@@ -419,6 +517,9 @@ if __name__ =="__main__":
             Verb_id_pre = tripleFrame_Treport_sort.head(1)[u"動詞_id"].values[0]
             Verb_id_first = tripleFrame_Treport_sort.head(2)[u"動詞_id"].values[1]
             for index_perR, (Noun, Verb, Particle, Verb_id) in enumerate(zip(tripleFrame_Treport_sort[u"名詞"], tripleFrame_Treport_sort[u"動詞"], tripleFrame_Treport_sort[u"助詞"], tripleFrame_Treport_sort[u"動詞_id"])):
+
+                if Noun!=Noun:
+                    continue
                 print Report_id, Verb_id
                 Result = Dc.predict(Noun, Particle, Verb)
                 DeepCase_unique = Dc.identify(Result)
@@ -431,7 +532,7 @@ if __name__ =="__main__":
                 if index_perR < len(tripleFrame_Treport_sort)-1:
                     if (Verb_id < tripleFrame_Treport_sort.ix[index_perR+1, u"動詞_id"]) or (index_perR == 0 and Verb_id_pre != Verb_id_first):
                         while [] in DeepCase_Noun_perV:
-                            DeepCase_Noun_perV[DeepCase_Noun_perV.index([])]=[u"\0"]
+                            DeepCase_Noun_perV[DeepCase_Noun_perV.index([])]=[u" "]
 
                         for DeepCase_Noun_tmp in list(itertools.product(DeepCase_Noun_perV[0], DeepCase_Noun_perV[1], DeepCase_Noun_perV[2], DeepCase_Noun_perV[3], DeepCase_Noun_perV[4], DeepCase_Noun_perV[5], DeepCase_Noun_perV[6])):
                             Verb_target.append(Verb)
@@ -444,7 +545,7 @@ if __name__ =="__main__":
                             #SurfaceCase_Noun_perV = [[] for i in range(len(Dc.dummylist[2].columns))]
                 else:
                     while [] in DeepCase_Noun_perV:
-                        DeepCase_Noun_perV[DeepCase_Noun_perV.index([])] = [u"\0"]
+                        DeepCase_Noun_perV[DeepCase_Noun_perV.index([])] = [u" "]
 
                     for DeepCase_Noun_tmp in list(itertools.product(DeepCase_Noun_perV[0], DeepCase_Noun_perV[1], DeepCase_Noun_perV[2], DeepCase_Noun_perV[3], DeepCase_Noun_perV[4], DeepCase_Noun_perV[5], DeepCase_Noun_perV[6])):
                         Verb_target.append(Verb)
@@ -473,8 +574,10 @@ if __name__ =="__main__":
         #cd_columns.extend([Dc.dummylist[2].columns[i] for i in range(len(Dc.dummylist[2].columns))])
 
         case_df = DataFrame(case_frame, columns=cd_columns)
-
         case_df.to_csv(u"D:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
+
+        terms, documents = extract_terms(case_df)
+        idf_Treport = idf(terms, documents)
 
         '''
                 for r in Result:
