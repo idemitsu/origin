@@ -24,9 +24,8 @@ def Triple_extract(path):
         TR = Treport(path)
         triplelist = {}
         for i in range(1, TR.s.nrows):
-            #if i>TR.s.nrows/2:
-            if i>1000:
-                break
+            if i>TR.s.nrows/2: break
+            #if i>1000: break
             print i
             noenc = TR.delete_unnecc(i)
            # TR.s.cell_value(i, 2)
@@ -104,7 +103,7 @@ def TNoun_extract(tripleFrame, NV_class):
     for id, noun, particle, verb, verb_id in zip(tripleFrame.index, tripleFrame[u"名詞"],
                                                  tripleFrame[u"助詞"], tripleFrame[u"動詞"],
                                                  tripleFrame[u"動詞_id"]):
-        if id >500: break
+        #if id >300: break
 
         #print noun, particle, verb
         print "Extract triple_Treport:", id, verb_id
@@ -196,33 +195,30 @@ def TNoun_extract(tripleFrame, NV_class):
         if TNneed and TVneed:
             #並列している名詞の分解
             Mor_connect = [[u"接続詞"],[u"読点", u"並立助詞", u"接続助詞"]]
-            No_con = True
-            for conList in Mor_connect:
-                for con in conList:
-                    if (con in Mor_1) or (con in Mor_2):
+            if set(Mor_connect[0]).intersection(set(Mor_1)) or set(Mor_connect[1]).intersection(set(Mor_2)):
+                noun_con = u""
+                for oi, out in enumerate(outList):
+                    if outList[oi][1] not in Mor_connect[0] and outList[oi][2] not in Mor_connect[1]:
+                        if out[0]!=u"等":
+                            noun_con += out[0]
+                    else:
+                        #print out[0], noun_con
+                        triple_Treport[0].append(id)
+                        triple_Treport[1].append(noun_con)
+                        triple_Treport[2].append(particle)
+                        triple_Treport[3].append(verb)
+                        triple_Treport[4].append(verb_id)
                         noun_con = u""
-                        for oi, out in enumerate(outList):
-                            if (outList[oi][1] != con) and (outList[oi][2] != con):
-                                if out[0]!=u"等":
-                                    noun_con += out[0]
-                            else:
-                                triple_Treport[0].append(id)
-                                triple_Treport[1].append(noun_con)
-                                triple_Treport[2].append(particle)
-                                triple_Treport[3].append(verb)
-                                triple_Treport[4].append(verb_id)
-                                noun_con = u""
-                                No_con = False
-                            if oi==len(outList)-1:
-                                triple_Treport[0].append(id)
-                                triple_Treport[1].append(noun_con)
-                                triple_Treport[2].append(particle)
-                                triple_Treport[3].append(verb)
-                                triple_Treport[4].append(verb_id)
-                                noun_con = u""
-                                No_con = False
+                        continue
+                    if oi==len(outList)-1:
+                        triple_Treport[0].append(id)
+                        triple_Treport[1].append(noun_con)
+                        triple_Treport[2].append(particle)
+                        triple_Treport[3].append(verb)
+                        triple_Treport[4].append(verb_id)
+                        noun_con = u""
 
-            if No_con:
+            else:
                 triple_Treport[0].append(id)
                 triple_Treport[1].append(noun)
                 triple_Treport[2].append(particle)
@@ -244,7 +240,7 @@ def TNoun_extract(tripleFrame, NV_class):
     tripleFrame_Treport[u"動詞"] = tripleFrame_Treport[u"動詞"].map(fvu)
     return tripleFrame_Treport
 
-def extract_terms(self, case_df):
+def extract_terms(case_df):
     Noun_comp = u""
     wakachi = u""
     preR_id = 1
@@ -253,7 +249,8 @@ def extract_terms(self, case_df):
     for (Report_id, frame) in zip(case_df[u"報告書_id"], case_df.loc[:, [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係", u"動詞"]].values):
         if preR_id != Report_id:
             documents.append(wakachi)
-            print wakachi
+            print Report_id
+            #print wakachi
             wakachi = u""
         if frame[7][-2:] != u"する":
             wakachi += frame[7] + u" "
@@ -285,28 +282,37 @@ def extract_terms(self, case_df):
                     wakachi += Mor[0] + u" "
                     if Mor[0] not in terms: terms.append(Mor[0])
 
-        preR_id += 1
+        preR_id = Report_id
     documents.append(wakachi)
     return terms, documents
 
-def tf(self, terms, document):
+def tf(terms, document):
     #TF値の計算。単語リストと文章を渡す
     tf_values = [document.count(term) for term in terms]
     return list(map(lambda x: x/sum(tf_values), tf_values))
 
-def idf(self, terms, documents):
+def idf(terms, documents):
     #IDF値の計算。単語リストと全文章を渡す
     return [math.log10(len(documents)/sum([bool(term in document) for document in documents])) for term in terms]
 
-def tf_idf(self, terms, documents):
+def tf_idf(terms, documents):
     #TF-IDF値を計算。文章毎にTF-IDF値を計算
     return [[_tf*_idf for _tf, _idf in zip(tf(terms, document), idf(terms, documents))] for document in documents]
 
 
-def bunrui_frame(self, case_df, terms, idf_Treport):
+def bunrui_frame(case_df, terms, idf_Treport):
     MorList = []
     Noun_comp = u""
     Noun_weight = 2.0
+    idf_Treport = Series(idf_Treport)
+    zero = min(idf_Treport)
+    if zero==0:
+        min_idf=1.0
+        for idf in idf_Treport:
+            if idf<min_idf and idf!=zero:
+                min_idf=idf
+        idf_Treport[idf_Treport == 0] = min_idf*0.5
+
     case_df[u"事象"] = case_df[u"主体"] + case_df[u"起点"] + case_df[u"対象"] + case_df[u"状況"] + case_df[u"着点"] + case_df[
         u"手段"] + case_df[u"関係"] + case_df[u"動詞"]
 
@@ -324,7 +330,6 @@ def bunrui_frame(self, case_df, terms, idf_Treport):
             Mor_1 = [outList[i][1] for i in range(len(outList))]
             # if (u"接続詞" in Mor_1) | (u"記号" in Mor_1):
             #    continue
-            Nocomp = True
             for mi, Mor in enumerate(outList):
                 if Mor_1[mi] == u"名詞" and Mor[2] != u"形容動詞語幹":
                     Noun_comp += Mor[0]
@@ -332,18 +337,10 @@ def bunrui_frame(self, case_df, terms, idf_Treport):
                         if Mor_1[mi + 1] != u"名詞":
                             MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)] * Noun_weight
                             Noun_comp = u""
-                            Nocomp=True
 
-                        else:
-                            Nocomp =False
                     else:
-                        if Nocomp and Mor[2] == u"サ変接続":
-                            MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)]
-                            Noun_comp = u""
-                        else:
-                            MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)] * Noun_weight
-                            Noun_comp = u""
-
+                        MorList_tmp[Noun_comp] = idf_Treport[terms.index(Noun_comp)]*Noun_weight
+                        Noun_comp = u""
                 elif Mor_1[mi] != u"助詞" and Mor_1[mi] != u"助動詞" and Mor[5] != u"サ変・スル" and Mor[2] != u"接尾":
                     MorList_tmp[Mor[0]] = idf_Treport[terms.index(Mor[0])]
 
@@ -415,14 +412,26 @@ def bunrui_frame(self, case_df, terms, idf_Treport):
 
                     xy_insec = set(x.keys()).intersection(set(y.keys()))
                     w_all = 0.00
+                    #jaccard係数
                     for mor_val in xy_set.values():
                         w_all += mor_val
+                    '''
+                    #Simpthon係数
+                    if len(x.keys())<len(y.keys()):
+                        for mor_val in x.values():
+                            w_all += mor_val
+                    else:
+                        for mor_val in y.values():
+                            w_all += mor_val
+                    '''
+
                     w_insec = 0.00
                     for mor_val in xy_insec:
                         w_insec += xy_set[mor_val]
                     dist_str = w_insec / w_all
-                    if dist_str > 0.3:
-                        #もしくは、頻度が高い格フレーム
+                    if dist_str >= 0.3:
+                        #'''
+                        #頻度が高い格フレーム
                         if Case_freq[cf[j]] <= Case_freq[cf[i]] and cf[i] not in unifyList.keys():
                             unifyList[cf[i]] = cf[j]
                         elif Case_freq[cf[j]] > Case_freq[cf[i]] and cf[j] not in unifyList.keys():
@@ -444,15 +453,16 @@ def bunrui_frame(self, case_df, terms, idf_Treport):
     Wdist = DataFrame(Wdist, index=[Wdist_index, Wdist_column], columns=[u"Similarity"])
 
     fnc = lambda x: unifyList.get(x, x)
-    case_df[u"事象"] = case_df[u"事象"].map(fnc)
-    return case_df
+    while set(case_df[u"事象"]).intersection(set(unifyList.keys())):
+        case_df[u"事象"] = case_df[u"事象"].map(fnc)
+    return case_df, Wdist
 
 
 if __name__ =="__main__":
         #全トリプルの抽出
         '''
-        path = u'D:/Users/ide/Desktop/データ関連/診断考察/report_data_ver4_1.xlsx'
-        path = u'D:/研究/データ/report_data_ver4_1.xlsx'
+        path = u'C:/Users/ide/Desktop/データ関連/診断考察/report_data_ver4_1.xlsx'
+        #path = u'C:/研究/データ/report_data_ver4_1.xlsx'
         triplelist = Triple_extract(path)
         Nounlist = []
         Particlelist = []
@@ -469,34 +479,35 @@ if __name__ =="__main__":
                 idlist.append(Rindex)
         tripleFrame = DataFrame({u"名詞":Nounlist, u"助詞":Particlelist, u"動詞":Verblist, u"動詞_id":Verb_idlist, u"id":idlist}, columns=[u"id", u"名詞", u"助詞", u"動詞", u"動詞_id"])
         tripleFrame.set_index(u"id", inplace=True)
-        tripleFrame.to_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis')
+        tripleFrame.to_csv("C:/tmp/Treport/Triple.csv", encoding='shift-jis')
         '''
         #トリプルから事象の抽出
 
         from Deepcase import Deepcase
-        netpath="D:/tmp/Evaluation/neural_network/neuron7/Trained.Network"
-        dummylistpath = "D:/tmp/Evaluation/dummylist.Word"
-        NV_classpath="D:/tmp/Evaluation/NV_class.Word"
+        netpath="C:/tmp/Evaluation/neural_network/neuron7/Trained.Network"
+        dummylistpath = "C:/tmp/Evaluation/dummylist.Word"
+        NV_classpath="C:/tmp/Evaluation/NV_class.Word"
         Dc = Deepcase(netpath, dummylistpath, NV_classpath)
-        '''
-        tripleFrame = pd.read_csv("D:/tmp/Treport/Triple.csv", encoding='shift-jis', index_col=u'id')
+        #'''
+        tripleFrame = pd.read_csv("C:/tmp/Treport/Triple.csv", encoding='shift-jis', index_col=u'id')
         tripleFrame_Treport = TNoun_extract(tripleFrame, Dc.NV_class)
         tripleFrame_Treport.set_index(u"id", inplace=True)
-        tripleFrame_Treport.to_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis')
-        '''
+        tripleFrame_Treport.to_csv("C:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis')
+        #'''
         #未登録語の登録
         '''
-        unNoun_path = u"D:/tmp/Treport/unregistered_NounsClass.csv"
-        unVerb_path = u"D:/tmp/Treport/unregistered_Verbs(bunruidb)Class.csv"
+        unNoun_path = u"C:/tmp/Treport/unregistered_NounsClass.csv"
+        unVerb_path = u"C:/tmp/Treport/unregistered_Verbs(bunruidb)Class.csv"
         Dc.unregistered_words(unNoun_path, unVerb_path)
         
-        #bunruidb_path = u"D:/研究/bunruidb.txt"
-        bunruidb_path = u"D:/Users/ide/Desktop/データ関連/bunruidb/bunruidb.txt"
-        bun_Vthe_path = u"D:/tmp/Treport/bunruidb_Vthesaurus.csv"
+        #bunruidb_path = u"C:/研究/bunruidb.txt"
+        bunruidb_path = u"C:/Users/ide/Desktop/データ関連/bunruidb/bunruidb.txt"
+        bun_Vthe_path = u"C:/tmp/Treport/bunruidb_Vthesaurus.csv"
         Dc.buruidb_verbs(bunruidb_path, bun_Vthe_path)
         '''
+        #'''
         #格フレームの構築
-        tripleFrame_Treport = pd.read_csv("D:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis', index_col=u'id')
+        tripleFrame_Treport = pd.read_csv("C:/tmp/Treport/Triple_Treport.csv", encoding='shift-jis', index_col=u'id')
         Result_input = []
         Result_output = []
         DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
@@ -574,18 +585,16 @@ if __name__ =="__main__":
         #cd_columns.extend([Dc.dummylist[2].columns[i] for i in range(len(Dc.dummylist[2].columns))])
 
         case_df = DataFrame(case_frame, columns=cd_columns)
-        case_df.to_csv(u"D:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
-
+        case_df.to_csv(u"C:/tmp/Treport/caseframe.csv", encoding='shift-jis', index=False)
+        #'''
+        case_df = pd.read_csv("C:/tmp/Treport/caseframe.csv", encoding='shift-jis')
         terms, documents = extract_terms(case_df)
         idf_Treport = idf(terms, documents)
 
-        '''
-                for r in Result:
-                    Result_input.append(r[0]+(Report_id, Verb_id))
-                    Result_output.append(r[1])
-
-        inputFrame = DataFrame(Result_input, columns=[u"名詞", u"動詞", u"名詞クラス", u"動詞クラス", u"助詞", u"id", u"動詞_id"])
-        outputFrame = DataFrame(Result_output, columns=[u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"])
-        inputFrame.to_csv(u"D:/tmp/Treport/inputFrame.csv",encoding='shift-jis')
-        outputFrame.to_csv(u"D:/tmp/Treport/outputFrame.csv",encoding='shift-jis')
-        '''
+        case_df_unified, Wdist = bunrui_frame(case_df, terms, idf_Treport)
+        Wdist = pd.read_csv("C:/tmp/Treport/Wdist.csv", encoding='shift-jis')
+        case_mat = pd.pivot_table(case_df_unified.loc[:, [u"報告書_id", u"事象"]], index=u"報告書_id", columns=u"事象", aggfunc=len).fillna(0)
+        case_mat[case_mat > 1] = 1
+        indexer = case_mat.sum() > 1
+        case_mat2 = case_mat[indexer.index[indexer]]
+        case_mat2 = pd.read_csv("C:/tmp/Treport/case_mat.csv", encoding='shift-jis')
