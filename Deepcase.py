@@ -19,6 +19,7 @@ class Deepcase:
         self.net = net
         self.dummylist = dummylist
         self.NV_class = NV_class
+        self.DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
     
     def unregistered_words(self, unNoun_path, unVerb_path):
         unNoun_dict = pd.read_csv(unNoun_path, encoding='shift-jis', header=None)
@@ -96,12 +97,12 @@ class Deepcase:
             print
 
     def identify(self,result):
-        DeepCaseList = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
+
         max_value = -1.0
         for output_values in result: 
             if max_value < max(output_values[1]):
                 max_value = max(output_values[1])
-                DeepCase_unique = DeepCaseList[output_values[1].index(max(output_values[1]))]
+                DeepCase_unique = self.DeepCaseList[output_values[1].index(max(output_values[1]))]
         return DeepCase_unique
 
         

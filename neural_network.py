@@ -292,19 +292,19 @@ class Neural:
                 , width=bar_width, color="#000000", label=u"Highest", align="center")
         plt.title("")
         # plt.xlabel("Deep cases")
-        plt.ylabel(u"Precision(%)", fontsize=30)
+        plt.ylabel(u"Precisions (%)", fontsize=30)
         plt.grid(True)
         plt.bar(np.array(range(1, len(Ddummy.columns) + 1)) + bar_width,
                 np.array(precision2_perD) * np.array([100] * len(precision_perD)), color="#AAAAAA", width=bar_width,
                 label=u"Second_highest", align="center")
         # plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), label="Precision_max2")
         # plt.plot(np.array(range(1,len(Ddummy.columns)+1)), np.array(precision2_perD)*np.array([100]*len(precision_perD)), 'o')
-        plt.legend(bbox_to_anchor=(0, 0), loc='lower left', borderaxespad=0, fontsize=26)
+        plt.legend(bbox_to_anchor=(1, 1), loc='lower right', borderaxespad=0, fontsize=26)
         plt.xticks(np.array(range(1, len(Ddummy.columns) + 1)) + bar_width / 2, Ddummy.columns, fontsize=30)
 
 
 '''
-data_expclass = pd.read_csv("C:/tmp/Evaluation/dataclass_learning.csv",encoding="shift-jis")      
+data_expclass = pd.read_csv("D:/tmp/Evaluation/dataclass_learning.csv",encoding="shift-jis")
 from neural_network import Neural
 neu = Neural(data_expclass)
 neu.oversample()
@@ -316,37 +316,38 @@ XS = [NS, VS, PS]
 dummylist, Ddummy = neu.dummy()
 net, ds = neu.neural_data(dummylist[0],dummylist[1],dummylist[2],Ddummy)
 net = neu.neural_learn(net, ds)
-file = open('C:/tmp/Evaluation/neural_network/neuron1/Trained.Network','w')
+file = open('D:/tmp/Evaluation/neural_network/neuron1/Trained.Network','w')
 pickle.dump(net, file)
 file.close()
-file = open('C:/tmp/Evaluation/neural_network/neuron1/dummylist.Word','w')
+file = open('D:/tmp/Evaluation/neural_network/neuron1/dummylist.Word','w')
 pickle.dump(dummylist, file)
 file.close()
-#file = open('C:/tmp/Evaluation/Xvector.Word','w')
+#file = open('D:/tmp/Evaluation/Xvector.Word','w')
 #pickle.dump(Xvector, file)
 #file.close()
-#file = open('C:/tmp/Evaluation/XS.Word','w')
+#file = open('D:/tmp/Evaluation/XS.Word','w')
 #pickle.dump(XS, file)
 #file.close()
 
 precision_perD, resultlist, correctlist = neu.netresult(net, ds)
 print precision_perD
-
-data_expclass = pd.read_csv("C:/tmp/Evaluation/dataclass_predict.csv",encoding="shift-jis")      
+'''
+data_expclass = pd.read_csv("D:/tmp/Evaluation/dataclass_predict.csv",encoding="shift-jis")      
 neu2 = Neural(data_expclass)
 neu2.data_oversam = neu2.data_expclass
 dummylist2, Ddummy2 = neu2.dummy()
+Ddummy2.columns = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
 
-file = open('C:/tmp/Evaluation/neural_network/neuron/Trained.Network')
+file = open('D:/tmp/Evaluation/neural_network/neuron7/Trained.Network')
 net = pickle.load(file)
 file.close()
-file = open('C:/tmp/Evaluation/neural_network/neuron/dummylist.Word')
+file = open('D:/tmp/Evaluation/neural_network/neuron7/dummylist.Word')
 dummylist = pickle.load(file)
 file.close()
-#file = open('C:/tmp/Evaluation/Xvector.Word')
+#file = open('D:/tmp/Evaluation/Xvector.Word')
 #Xvector = pickle.load(file)
 #file.close()
-#file = open('C:/tmp/Evaluation/XS.Word')
+#file = open('D:/tmp/Evaluation/XS.Word')
 #XS = pickle.load(file)
 #file.close()
 
@@ -361,15 +362,17 @@ data_result[u'result'] = resultlist
 data_result[u'correct'] = correctlist
 precision2_perD = neu2.neteval(data_result)
 print precision2_perD
-data_result.to_csv("C:/tmp/Evaluation/data_result.csv",encoding="shift-jis")
+data_result.to_csv("D:/tmp/Evaluation/data_result.csv",encoding="shift-jis")
 
 neu2.resultplot(precision_perD2, precision2_perD, Ddummy2)
 
-data_expclass = pd.read_csv("C:/tmp/Evaluation/data_expclass.csv",encoding="shift-jis")
+data_expclass = pd.read_csv("D:/tmp/Evaluation/data_expclass.csv",encoding="shift-jis")
 data_expclass = data_expclass[data_expclass[u"名詞クラス"].isnull()]
 neu3 = Neural(data_expclass)
 neu3.data_oversam = neu3.data_expclass
 dummylist3, Ddummy3 = neu3.dummy()
+Ddummy3.columns = [u"主体", u"起点", u"対象", u"状況", u"着点", u"手段", u"関係"]
+
 net3, ds3 = neu3.neural_data(dummylist[0],dummylist[1],dummylist[2],Ddummy3)
 precision_perD3, resultlist, correctlist = neu3.netresult(net, ds3)
 print precision_perD3
@@ -382,4 +385,4 @@ print precision2_perD3
 neu3.resultplot(precision_perD3, precision2_perD3, Ddummy3)
 
 
-'''
+#'''
